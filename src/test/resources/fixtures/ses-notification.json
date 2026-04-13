@@ -1,0 +1,33 @@
+{
+  "notificationType": "Received",
+  "mail": {
+    "timestamp": "2026-04-13T10:00:00.000Z",
+    "source": "sender@example.com",
+    "messageId": "test-message-id",
+    "destination": ["hello@functorful.net"],
+    "headersTruncated": false,
+    "commonHeaders": {
+      "returnPath": "sender@example.com",
+      "from": ["Alice Smith <sender@example.com>"],
+      "date": "Sun, 13 Apr 2026 10:00:00 +0000",
+      "to": ["hello@functorful.net"],
+      "subject": "Inquiry about consulting"
+    }
+  },
+  "receipt": {
+    "timestamp": "2026-04-13T10:00:00.000Z",
+    "processingTimeMillis": 50,
+    "recipients": ["hello@functorful.net"],
+    "spamVerdict": {"status": "PASS"},
+    "virusVerdict": {"status": "PASS"},
+    "spfVerdict": {"status": "PASS"},
+    "dkimVerdict": {"status": "PASS"},
+    "dmarcVerdict": {"status": "PASS"},
+    "action": {
+      "type": "SNS",
+      "topicArn": "arn:aws:sns:eu-west-1:000000000000:functorful-hello-inbox",
+      "encoding": "UTF-8"
+    }
+  },
+  "content": "Return-Path: <sender@example.com>\r\nFrom: Alice Smith <sender@example.com>\r\nTo: hello@functorful.net\r\nSubject: Inquiry about consulting\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nHello,\r\n\r\nI would like to discuss a potential project.\r\n\r\nBest regards,\r\nAlice"
+}

@@ -1,0 +1,117 @@
+plugins {
+    id("io.micronaut.application") version "4.6.1"
+    id("io.micronaut.aot") version "4.6.1"
+    id("com.gradleup.shadow") version "8.3.9"
+}
+
+version = file('version.txt').getText("utf8").trim()
+group = "com.functorful.sestoq"
+
+def gitSha = providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }
+        .standardOutput.asText.map { it.trim() }
+
+def dockerImageTag = providers.environmentVariable("DOCKER_IMAGE_TAG")
+        .orElse(gitSha.map { sha -> "dev-$sha" })
+
+def dockerImageRepo = providers.environmentVariable("DOCKER_IMAGE_REPO")
+        .orElse("ghcr.io/functorful/ses-to-q")
+
+def dockerImage = dockerImageRepo.zip(dockerImageTag) { repo, tag -> "$repo:$tag" }
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+
+    implementation("io.micronaut.aws:micronaut-function-aws")
+    implementation("io.micronaut.aws:micronaut-function-aws-custom-runtime")
+    implementation("io.micronaut.aws:micronaut-aws-sdk-v2")
+    implementation("io.micronaut.aws:micronaut-aws-lambda-events-serde")
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("com.amazonaws:aws-lambda-java-events")
+    implementation("software.amazon.awssdk:sns") {
+        exclude(group: "software.amazon.awssdk", module: "apache-client")
+        exclude(group: "software.amazon.awssdk", module: "netty-nio-client")
+    }
+    implementation("software.amazon.awssdk:url-connection-client")
+
+    compileOnly("org.projectlombok:lombok")
+
+    runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly("org.yaml:snakeyaml")
+
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
+    testImplementation("org.mockito:mockito-core")
+    testImplementation("org.mockito:mockito-junit-jupiter")
+    testImplementation("org.assertj:assertj-core:3.27.7")
+}
+
+application {
+    mainClass = "io.micronaut.function.aws.runtime.MicronautLambdaRuntime"
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion("21")
+    targetCompatibility = JavaVersion.toVersion("21")
+}
+
+micronaut {
+    runtime("lambda_provided")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("com.functorful.sestoq.*")
+    }
+    aot {
+        optimizeServiceLoading = true
+        convertYamlToJava = true
+        precomputeOperations = true
+        cacheEnvironment = true
+        optimizeClassLoading = true
+        deduceEnvironment = true
+        optimizeNetty = true
+        replaceLogbackXml = true
+        netty {
+            enabled = true
+        }
+    }
+}
+
+graalvmNative {
+    binaries {
+        main {
+            buildArgs.addAll(
+                    "--initialize-at-build-time=ch.qos.logback",
+                    "-H:+ReportExceptionStackTraces",
+            )
+        }
+    }
+    toolchainDetection = false
+}
+
+tasks.named("optimizedBuildLayers") {
+    dependsOn("optimizedRunnerNativeJar")
+}
+
+tasks.named("optimizedBuildNativeLayersTask") {
+    dependsOn("optimizedRunnerJitJar")
+}
+
+tasks.named("dockerBuild") {
+    images = [dockerImage.get()]
+}
+
+tasks.named("dockerBuildNative") {
+    images = [dockerImage.get()]
+}
+
+tasks.named("optimizedDockerBuild") {
+    images = [dockerImage.get()]
+}
+
+tasks.named("optimizedDockerBuildNative") {
+    images = [dockerImage.get()]
+}
