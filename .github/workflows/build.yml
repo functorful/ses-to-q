@@ -28,6 +28,9 @@ jobs:
       - name: Build and test
         run: ./gradlew --build-cache build
 
+      - name: Build native Docker image
+        run: ./gradlew --build-cache optimizedDockerBuildNative
+
   tag:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
