@@ -4,7 +4,9 @@ plugins {
     id("com.gradleup.shadow") version "8.3.9"
 }
 
-version = file('version.txt').getText("utf8").trim()
+version = providers.exec {
+    commandLine("sh", "-c", "git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0-SNAPSHOT")
+}.standardOutput.asText.map { it.trim().replaceFirst("^v", "") }.get()
 group = "com.functorful.sestoq"
 
 def gitSha = providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }

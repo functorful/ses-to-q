@@ -3,7 +3,6 @@ name: Build & Publish
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -12,12 +11,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -33,22 +28,63 @@ jobs:
       - name: Build and test
         run: ./gradlew --build-cache build
 
+  tag:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs:
+      new_tag: ${{ steps.tag.outputs.new_tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and create tag
+        id: tag
+        uses: anothrNick/github-tag-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
+          TAG_PREFIX: v
+
+  publish:
+    needs: tag
+    if: needs.tag.outputs.new_tag != ''
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalce"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: gradle/actions/setup-gradle@v4
+
       - name: Build native Docker image
-        if: github.event_name == 'push'
         env:
           DOCKER_IMAGE_REPO: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          DOCKER_IMAGE_TAG: ${{ github.ref_type == 'tag' && format('v{0}', github.ref_name) || format('sha-{0}', github.sha) }}
+          DOCKER_IMAGE_TAG: ${{ needs.tag.outputs.new_tag }}
         run: ./gradlew --build-cache optimizedDockerBuildNative
 
       - uses: docker/login-action@v3
-        if: github.event_name == 'push'
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push image
-        if: github.event_name == 'push'
-        env:
-          TAG: ${{ github.ref_type == 'tag' && format('v{0}', github.ref_name) || format('sha-{0}', github.sha) }}
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.tag.outputs.new_tag }}
