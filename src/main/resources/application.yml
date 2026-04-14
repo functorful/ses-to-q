@@ -1,0 +1,9 @@
+micronaut:
+  application:
+    name: ses-to-q
+  serde:
+    deserialization:
+      ignore-unknown: true
+
+notification:
+  target-topic-arn: ${TARGET_SNS_TOPIC_ARN}

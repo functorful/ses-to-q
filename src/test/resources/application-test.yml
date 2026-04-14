@@ -1,0 +1,5 @@
+notification:
+  target-topic-arn: arn:aws:sns:eu-west-1:000000000000:test-topic
+
+aws:
+  region: eu-west-1
