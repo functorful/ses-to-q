@@ -30,6 +30,7 @@ dependencies {
 
     implementation("io.micronaut.aws:micronaut-function-aws")
     implementation("io.micronaut.aws:micronaut-function-aws-custom-runtime")
+    implementation("io.micronaut:micronaut-http-client-jdk")
     implementation("io.micronaut.aws:micronaut-aws-sdk-v2")
     implementation("io.micronaut.aws:micronaut-aws-lambda-events-serde")
     implementation("io.micronaut.serde:micronaut-serde-jackson")
@@ -52,7 +53,7 @@ dependencies {
 }
 
 application {
-    mainClass = "io.micronaut.function.aws.runtime.MicronautLambdaRuntime"
+    mainClass = "com.functorful.sestoq.SesToQRuntime"
 }
 
 java {

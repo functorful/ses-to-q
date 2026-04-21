@@ -1,6 +1,5 @@
 package com.functorful.sestoq;
 
-import com.amazonaws.services.lambda.runtime.events.SNSEvent;
 import com.functorful.sestoq.service.EmailParser;
 import com.functorful.sestoq.service.NotificationPublisher;
 import io.micronaut.context.ApplicationContext;
@@ -12,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.sns.SnsClient;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -63,7 +63,7 @@ class SesToQHandlerTest {
         when(emailParser.parse(anyString()))
                 .thenReturn(new EmailParser.ParsedEmail(SENDER, SUBJECT, BODY));
 
-        SNSEvent event = createSnsEvent(SES_NOTIFICATION_JSON);
+        Map<String, Object> event = createSnsEvent(SES_NOTIFICATION_JSON);
 
         handler.execute(event);
 
@@ -77,7 +77,7 @@ class SesToQHandlerTest {
                 .thenReturn(new EmailParser.ParsedEmail(SENDER, SUBJECT, BODY));
 
         String secondMessage = "{\"mail\":{\"source\":\"other\"}}";
-        SNSEvent event = createSnsEvent(SES_NOTIFICATION_JSON, secondMessage);
+        Map<String, Object> event = createSnsEvent(SES_NOTIFICATION_JSON, secondMessage);
 
         handler.execute(event);
 
@@ -86,20 +86,13 @@ class SesToQHandlerTest {
         verify(notificationPublisher, times(2)).publish(SENDER, SUBJECT, BODY);
     }
 
-    private SNSEvent createSnsEvent(String... messages) {
-        List<SNSEvent.SNSRecord> records = java.util.Arrays.stream(messages)
-                .map(msg -> {
-                    SNSEvent.SNS sns = new SNSEvent.SNS();
-                    sns.setMessage(msg);
-                    sns.setMessageId("test-id");
-                    SNSEvent.SNSRecord record = new SNSEvent.SNSRecord();
-                    record.setSns(sns);
-                    return record;
-                })
+    private Map<String, Object> createSnsEvent(String... messages) {
+        List<Map<String, Object>> records = java.util.Arrays.stream(messages)
+                .map(msg -> Map.<String, Object>of(
+                        "Sns", Map.of("Message", msg, "MessageId", "test-id")
+                ))
                 .toList();
 
-        SNSEvent event = new SNSEvent();
-        event.setRecords(records);
-        return event;
+        return Map.of("Records", records);
     }
 }
