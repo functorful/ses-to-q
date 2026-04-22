@@ -40,6 +40,7 @@ dependencies {
         exclude(group: "software.amazon.awssdk", module: "netty-nio-client")
     }
     implementation("software.amazon.awssdk:url-connection-client")
+    implementation("org.jsoup:jsoup:1.18.3")
 
     compileOnly("org.projectlombok:lombok")
 
