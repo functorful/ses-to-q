@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+      id-token: write
       contents: read
       packages: write
 
@@ -38,6 +39,15 @@ jobs:
       - name: Set image metadata
         id: meta
         run: echo "image_tag=dev-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials (public ECR)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::879090019401:role/functorful/dev/github-ci-public-ecr-pull
+          aws-region: us-east-1
+
+      - name: Login to public ECR
+        run: aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
 
       - name: Build native Docker image
         run: ./gradlew --build-cache optimizedDockerBuildNative
