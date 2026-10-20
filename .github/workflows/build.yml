@@ -12,7 +12,8 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # The Lambda runs on arm64, and the native image is built for the runner's architecture.
+    runs-on: ubuntu-24.04-arm
 
     permissions:
       id-token: write
@@ -52,6 +53,12 @@ jobs:
       - name: Build native Docker image
         run: ./gradlew --build-cache optimizedDockerBuildNative
 
+      - name: Verify image architecture
+        run: |
+          arch=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.image_tag }})
+          echo "Image platform: $arch"
+          test "$arch" = "linux/arm64"
+
       - name: Push image with SHA tag
         if: github.event_name == 'push'
         run: |
@@ -85,7 +92,8 @@ jobs:
   publish:
     needs: [test, tag]
     if: needs.tag.outputs.new_tag != ''
-    runs-on: ubuntu-latest
+    # Same architecture as the image, so the pull does not need a platform override.
+    runs-on: ubuntu-24.04-arm
 
     permissions:
       contents: read
